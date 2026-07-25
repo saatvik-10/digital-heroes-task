@@ -1,6 +1,12 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #102033;
+  --color-line: #d8e1ec;
+  --color-panel: #f7f9fc;
+  --color-brand: #0f5bd8;
+  --shadow-soft: 0 12px 40px rgba(16, 32, 51, 0.08);
+}
 
 * {
   box-sizing: border-box;
