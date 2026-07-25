@@ -1,20 +1,24 @@
 # Page Pulse
 
-Page Pulse audits a public URL and returns a small SEO and accessibility snapshot. It was built for the Digital Heroes SDE task using a split frontend/backend deployment model.
+Page Pulse audits a public URL and returns a compact SEO and accessibility snapshot. The app is split into a React client and a Bun/Hono server so the audit flow stays simple and testable.
 
 ## Stack
 
-- Client: React, Vite, Tailwind CSS
+- Client: React, Vite, Tailwind CSS, Axios
 - Server: Bun, Hono, Cheerio
 - Validation: Zod
-- Tests: bun:test
-- Deployment: Vercel for `client`, Render for `server`
+- Tests: `bun:test`
 
-Prisma and Neon are intentionally not included because this version does not persist audit history.
+The app does not persist audit history, so Prisma and a database are not part of this version.
+
+## Repository Layout
+
+- `client/` contains the UI and Vite app.
+- `server/` contains the audit API, validation, and tests.
 
 ## Local Setup
 
-Install dependencies:
+Install dependencies in both workspaces:
 
 ```bash
 cd server
@@ -22,6 +26,24 @@ bun install
 
 cd ../client
 bun install
+```
+
+Copy the provided environment examples if you want local overrides:
+
+```bash
+cp client/.env.example client/.env.local
+cp server/.env.example server/.env
+```
+
+The defaults are:
+
+```env
+# client/.env.local
+VITE_API_BASE_URL=http://localhost:3000
+
+# server/.env
+CLIENT_ORIGIN=http://localhost:5173
+PORT=3000
 ```
 
 Run the API:
@@ -38,19 +60,25 @@ cd client
 bun run dev
 ```
 
-Create `client/.env.local`:
+Optional production builds:
 
-```env
-VITE_API_BASE_URL=http://localhost:3000
+```bash
+cd server
+bun run start
+
+cd ../client
+bun run build
 ```
 
-Create `server/.env` if you need a custom frontend origin:
+## API
 
-```env
-CLIENT_ORIGIN=http://localhost:5173
+### `GET /health`
+
+Returns:
+
+```json
+{ "ok": true }
 ```
-
-## API Contract
 
 ### `POST /api/audit`
 
@@ -82,7 +110,7 @@ Error response:
 
 ```json
 {
-  "error": "Invalid URL. Please provide a valid http or https URL.",
+  "error": "URL is required.",
   "status": 400
 }
 ```
@@ -99,6 +127,8 @@ The API uses Hono `HTTPException` for expected failures:
 
 ## Tests
 
+Run the server test suite with:
+
 ```bash
 cd server
 bun test
@@ -106,56 +136,22 @@ bun test
 
 Covered cases:
 
-- parser happy path for valid `http` and `https` URLs
-- parser failure for malformed URLs
-- parser failure for unsupported URL schemes
+- audit success path
+- validation failure for missing or malformed URLs
+- unsupported URL schemes
 - timeout handling
-- non-HTML response
-- API success and error response shape
+- non-HTML responses
+- API success and error response shapes
 
-## Design Decisions
+## Design Notes
 
-1. The audit logic is separated from the Hono app so tests can exercise URL validation, fetch behavior, and HTML parsing without running a server.
-2. The API accepts only `http` and `https` URLs, then rejects non-HTML responses with `415`, because the requested metrics require a fetchable HTML document.
-3. The backend is split into `routes`, `validator`, `services`, and `utils` so validation, transport, and audit logic stay separate without adding unnecessary controller boilerplate.
+1. Audit logic is separated from the Hono app so tests can exercise validation, fetch behavior, and HTML parsing without running a server.
+2. The API only accepts `http` and `https` URLs because the requested metrics require a fetchable HTML document.
+3. The backend is organized into `routes`, `validator`, `services`, and `utils` to keep transport, validation, and parsing concerns separate.
 
-## Deployment
+## Deployment Notes
 
-### Render Backend
-
-The repo includes `render.yaml` and `server/Dockerfile` for a Docker-based Render web service. If you configure it manually instead, use `server` as the root directory, `bun install` as the build command, and `bun run start` as the start command.
-
-Environment:
-
-```env
-CLIENT_ORIGIN=https://your-vercel-app.vercel.app
-```
-
-### Vercel Frontend
-
-Root directory:
-
-```text
-client
-```
-
-Build command:
-
-```bash
-bun run build
-```
-
-Output directory:
-
-```text
-dist
-```
-
-Environment:
-
-```env
-VITE_API_BASE_URL=https://your-render-service.onrender.com
-```
+Set the frontend to point at the deployed API with `VITE_API_BASE_URL`, and set `CLIENT_ORIGIN` on the server to the deployed client origin. The server also respects `PORT` when your hosting provider supplies one.
 
 ## Task Credit
 
